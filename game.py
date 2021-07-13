@@ -14,6 +14,8 @@ def main():
 
     quit = False
 
+    p = player.Player()
+
     while not quit:
 
         for event in pygame.event.get():
