@@ -17,8 +17,8 @@ def main():
 
     quit = False
 
-    p = Player(1.5, 1.5, -1, 0)
-    plane = Vector2(0, 0.66)
+    p = Player(1.5, 1.5, 0, -1)
+    plane = Vector2(0.66, 0)
 
     last_frame = pygame.time.get_ticks()
 
@@ -76,7 +76,7 @@ def main():
                     map_pos.y += step.y
                     side = 1
 
-                if map.map[int(map_pos.x)][int(map_pos.y)] == 1:
+                if map.map[int(map_pos.y)][int(map_pos.x)] == 1:
                     hit = True
 
             if side is None:
@@ -99,6 +99,9 @@ def main():
                 color = (128, 128, 128)
 
             pygame.draw.line(screen, color, (x, line_start), (x, line_end))
+        vector_for_first_col = -plane
+        pygame.draw.line(screen, (0, 255, 0), (width/2, height/2), (width/2 + vector_for_first_col.x * 100, height/2 + vector_for_first_col.y * 100))
+        pygame.draw.line(screen, (0, 0, 255), (width/2 + vector_for_first_col.x * 100, height/2 + vector_for_first_col.y * 100), (width/2 + vector_for_first_col.x * 105, height/2 + vector_for_first_col.y * 105))
 
 
         pygame.display.flip()
@@ -134,23 +137,24 @@ def main():
                     key_held["a"] = False
 
         if key_held["w"]:
-            if map.map[int(p.pos.x + p.dir.x * acc * dt)][int(p.pos.y)] == 0:
+            if map.map[int(p.pos.y)][int(p.pos.x + p.dir.x * acc * dt)] == 0:
                 p.pos.x += p.dir.x * acc * dt
-            if map.map[int(p.pos.x)][int(p.pos.y + p.dir.y * acc * dt)] == 0:
+            if map.map[int(p.pos.y + p.dir.y * acc * dt)][int(p.pos.x)] == 0:
                 p.pos.y += p.dir.y * acc * dt
         elif key_held["s"]:
-            if map.map[int(p.pos.x - p.dir.x * acc * dt)][int(p.pos.y)] == 0:
+            if map.map[int(p.pos.y)][int(p.pos.x - p.dir.x * acc * dt)] == 0:
                 p.pos.x -= p.dir.x * acc * dt
-            if map.map[int(p.pos.x)][int(p.pos.y - p.dir.y * acc * dt)] == 0:
+            if map.map[int(p.pos.y - p.dir.y * acc * dt)][int(p.pos.x)] == 0:
                 p.pos.y -= p.dir.y * acc * dt
 
         if key_held["d"]:
             old_dir = p.dir
-            p.dir = Vector2(old_dir.x * math.cos(-angular_acc * dt) - old_dir.y * math.sin(-angular_acc * dt),
-                            old_dir.x * math.sin(-angular_acc * dt) + old_dir.y * math.cos(-angular_acc * dt))
+            p.dir = Vector2(old_dir.x * math.cos(-angular_acc * dt) + old_dir.y * math.sin(-angular_acc * dt),
+                            - old_dir.x * math.sin(-angular_acc * dt) + old_dir.y * math.cos(-angular_acc * dt))
             old_plane = plane
-            plane = Vector2(old_plane.x * math.cos(-angular_acc * dt) - old_plane.y * math.sin(-angular_acc * dt),
-                            old_plane.x * math.sin(-angular_acc * dt) + old_plane.y * math.cos(-angular_acc * dt))
+            plane = Vector2(old_plane.x * math.cos(-angular_acc * dt) + old_plane.y * math.sin(-angular_acc * dt),
+                            - old_plane.x * math.sin(-angular_acc * dt) + old_plane.y * math.cos(-angular_acc * dt))
+            print(plane, p.dir)
         elif key_held["a"]:
             old_dir = p.dir
             p.dir = Vector2(old_dir.x * math.cos(angular_acc * dt) - old_dir.y * math.sin(angular_acc * dt),
