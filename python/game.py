@@ -157,11 +157,11 @@ def main():
             print(plane, p.dir)
         elif key_held["a"]:
             old_dir = p.dir
-            p.dir = Vector2(old_dir.x * math.cos(angular_acc * dt) - old_dir.y * math.sin(angular_acc * dt),
-                            old_dir.x * math.sin(angular_acc * dt) + old_dir.y * math.cos(angular_acc * dt))
+            p.dir = Vector2(old_dir.x * math.cos(angular_acc * dt) + old_dir.y * math.sin(angular_acc * dt),
+                            - old_dir.x * math.sin(angular_acc * dt) + old_dir.y * math.cos(angular_acc * dt))
             old_plane = plane
-            plane = Vector2(old_plane.x * math.cos(angular_acc * dt) - old_plane.y * math.sin(angular_acc * dt),
-                            old_plane.x * math.sin(angular_acc * dt) + old_plane.y * math.cos(angular_acc * dt))
+            plane = Vector2(old_plane.x * math.cos(angular_acc * dt) + old_plane.y * math.sin(angular_acc * dt),
+                            - old_plane.x * math.sin(angular_acc * dt) + old_plane.y * math.cos(angular_acc * dt))
 
 if __name__ == "__main__":
     main()
