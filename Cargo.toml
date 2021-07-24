@@ -4,9 +4,15 @@ version = "0.1.0"
 authors = ["Shaleen Baral <shaleenbaral111@gmail.com>"]
 edition = "2018"
 
+[lib]
+name = "engine"
+path = "src/engine/lib.rs"
+
+[[bin]]
+name = "bin"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-"winit" = "0.25.0"
-"winit_input_helper" = "0.10.0"
-"pixels" = "0.4.0"
+"sdl2" = "0.34"
