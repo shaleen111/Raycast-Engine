@@ -1,143 +1,152 @@
-use std::thread::sleep;
-use std::time::{Duration, Instant};
+use engine::Engine;
+use engine::EngineState;
+use engine::Runnable;
+use engine::environment::Environment;
+use engine::camera::Camera;
 
-use winit::{
-    event::{Event, VirtualKeyCode},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
-use winit_input_helper::WinitInputHelper;
+use sdl2::pixels::Color;
+use sdl2::render::Canvas;
+use sdl2::video::Window;
+use sdl2::keyboard::Keycode;
 
-use pixels::{Error, Pixels, SurfaceTexture};
-
-mod vector;
-mod environment;
-mod camera;
-mod player;
-
-use environment::Environment;
-use camera::Camera;
-
-
-fn main()
+pub struct Game
 {
-    let mut input = WinitInputHelper::new();
+    env: Environment,
+    camera: Camera,
+    camera_speed: f64,
+    camera_angular_speed: f64,
+}
 
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new()
-                                .with_title("Raycast Engine")
-                                .with_inner_size(winit::dpi::LogicalSize::new(480.0, 272.0))
-                                .with_resizable(false)
-                                .build(&event_loop).unwrap();
-
-    let window_size = window.inner_size();
-
-    let main_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-    let mut pixels = Pixels::new(240, 136, main_texture).unwrap();
-
-    let map = vec![vec![1, 1, 1, 1, 1, 1, 1, 1],
-                   vec![1, 0, 0, 0, 1, 0, 0, 1],
-                   vec![1, 0, 0, 0, 1, 0, 0, 1],
-                   vec![1, 0, 0, 0, 0, 0, 0, 1],
-                   vec![1, 0, 1, 1, 1, 1, 0, 1],
-                   vec![1, 0, 0, 0, 0, 0, 0, 1],
-                   vec![1, 0, 0, 0, 0, 0, 0, 1],
-                   vec![1, 1, 1, 1, 1, 1, 1, 1],];
-
-    let env = Environment::new(8, 8, map);
-    let mut cam = Camera::new(1.5, 1.5, 0.0, -1.0, 67.0, 240.0, 136.0);
-
-    let camera_speed = 5.0;
-    let camera_angular_speed = 3.0;
-
-    let mut last_frame = Instant::now();
-    let mut dt = 1.0;
-
-    let target_dt = 1.0 / 60.0;
-
-    event_loop.run(move |event, _, control_flow|
-                        {
-                            let current_frame = Instant::now();
-
-                            dt = current_frame.duration_since(last_frame).as_secs_f64();
-                            // // while dt < target_dt
-                            // // {
-                            // //     let sleep_time = target_dt - dt;
-                            // //     sleep(Duration::from_secs_f64(sleep_time));
-                            // //     current_frame = Instant::now();
-                            // //     dt = current_frame.duration_since(last_frame).as_secs_f64();
-                            // // }
-
-
-                            println!("{:?}", 1.0 / dt);
-
-                            if input.update(&event)
-                            {
-                                if input.key_released(VirtualKeyCode::Escape) || input.quit()
-                                {
-                                    *control_flow = ControlFlow::Exit;
-                                    return;
-                                }
-
-                                if input.key_held(VirtualKeyCode::W)
-                                {
-                                    if env.get_object_in_map((cam.pos.x + cam.projection_plane_orientation.x * camera_speed * dt) as isize,
-                                                              cam.pos.y as isize) == 0
-                                                              {
-                                                                  cam.pos.x += cam.projection_plane_orientation.x * camera_speed * dt;
-                                                                }
-                                                                if env.get_object_in_map( cam.pos.x as isize,
-                                                                    (cam.pos.y + cam.projection_plane_orientation.y * camera_speed * dt) as isize) == 0
-                                    {
-                                        cam.pos.y += cam.projection_plane_orientation.y * camera_speed * dt;
-                                    }
-                                }
-                                else if input.key_held(VirtualKeyCode::S)
-                                {
-                                    if env.get_object_in_map((cam.pos.x - cam.projection_plane_orientation.x * camera_speed * dt) as isize,
-                                    cam.pos.y as isize) == 0
-                                    {
-                                        cam.pos.x -= cam.projection_plane_orientation.x * camera_speed * dt;
-                                    }
-                                    if env.get_object_in_map( cam.pos.x as isize,
-                                        (cam.pos.y - cam.projection_plane_orientation.y * camera_speed * dt) as isize) == 0
-                                        {
-                                            cam.pos.y -= cam.projection_plane_orientation.y * camera_speed * dt;
-                                        }
-                                    }
-
-                                    if input.key_held(VirtualKeyCode::A)
-                                    {
-                                        cam.rotate(camera_angular_speed * dt);
-                                    }
-                                    else if input.key_held(VirtualKeyCode::D)
-                                    {
-                                        cam.rotate(- camera_angular_speed * dt);
-                                    }
-                                }
-
-                                if let Event::RedrawRequested(_) = event
-                                {
-                                    let frames = pixels.get_frame();
-                                    clear(frames);
-                                    cam.render_frame(&env, frames);
-                                    if pixels.render().is_err()
-                                    {
-                                        println!("Reached Here");
-                                        *control_flow = ControlFlow::Exit;
-                                        return;
-                                    }
-                            }
-
-                            window.request_redraw();
-                            last_frame = current_frame;
-                        });
-                    }
-
-fn clear(frame: &mut [u8])
+impl Game
 {
-    for pixel in frame.chunks_exact_mut(4)
+    pub fn init(width: u32, height: u32) -> Self
     {
-        pixel.copy_from_slice(&[0, 0, 0, 255]);
+        let map: Vec<Vec<usize>> = vec![vec![2, 3, 3, 3, 3, 3, 3, 3,],
+                                        vec![2, 0, 0, 0, 0, 0, 0, 3,],
+                                        vec![2, 0, 1, 1, 0, 0, 0, 3,],
+                                        vec![2, 0, 1, 0, 0, 0, 0, 3,],
+                                        vec![2, 0, 0, 0, 1, 1, 0, 3,],
+                                        vec![2, 0, 0, 0, 1, 1, 0, 3,],
+                                        vec![2, 0, 0, 0, 0, 0, 0, 3,],
+                                        vec![2, 2, 2, 2, 2, 2, 2, 2],];
+
+        let mut env = Environment::new(8, 8, map);
+        env.add_resource(1, Color::RGB(255, 255, 255));
+        env.add_resource(2, Color::RGB(255, 0, 0));
+        env.add_resource(3, Color::RGB(0, 255, 0));
+        env.add_resource(4, Color::RGB(0, 0, 255));
+
+        let camera = Camera::new(1.5, 1.5, 0.0, -1.0, 67.0,  width as f64, height as f64);
+        let camera_speed = 5.0;
+        let camera_angular_speed = 3.0;
+
+        Self
+        {
+            env,
+            camera,
+            camera_speed,
+            camera_angular_speed,
+        }
     }
+}
+
+impl Runnable for Game
+{
+    fn update(&mut self, state: &EngineState)
+    {
+        println!("{:?}", 1.0 / state.dt);
+        if state.key_held(Keycode::W)
+        {
+            println!("W");
+            let mut new_x = self.camera.pos.x + self.camera.projection_plane_orientation.x * self.camera_speed * state.dt;
+            let mut new_y = self.camera.pos.y + self.camera.projection_plane_orientation.y * self.camera_speed * state.dt;
+
+            if new_x < 0.0
+            {
+                new_x = 0.0;
+            }
+            if new_y < 0.0
+            {
+                new_y = 0.0;
+            }
+
+            if new_x >= 8.0
+            {
+                new_x = 7.0;
+            }
+            if new_y >= 8.0
+            {
+                new_y = 7.0;
+            }
+
+            if self.env.get_object_in_map(new_x as isize, self.camera.pos.y as isize) == 0
+            {
+                self.camera.pos.x = new_x;
+            }
+
+            if self.env.get_object_in_map(self.camera.pos.x as isize, new_y as isize) == 0
+            {
+                self.camera.pos.y = new_y;
+            }
+        }
+        else if state.key_held(Keycode::S)
+        {
+            let mut new_x = self.camera.pos.x - self.camera.projection_plane_orientation.x * self.camera_speed * state.dt;
+            let mut new_y = self.camera.pos.y - self.camera.projection_plane_orientation.y * self.camera_speed * state.dt;
+
+            if new_x < 0.0
+            {
+                new_x = 0.0;
+            }
+            if new_y < 0.0
+            {
+                new_y = 0.0;
+            }
+
+            if new_x >= 8.0
+            {
+                new_x = 7.0;
+            }
+            if new_y >= 8.0
+            {
+                new_y = 7.0;
+            }
+
+            if self.env.get_object_in_map(new_x as isize, self.camera.pos.y as isize) == 0
+            {
+                self.camera.pos.x = new_x;
+            }
+
+            if self.env.get_object_in_map(self.camera.pos.x as isize, new_y as isize) == 0
+            {
+                self.camera.pos.y = new_y;
+            }
+        }
+
+        if state.key_held(Keycode::A)
+        {
+            self.camera.rotate(self.camera_angular_speed * state.dt);
+        }
+        else if state.key_held(Keycode::D)
+        {
+            self.camera.rotate(- self.camera_angular_speed * state.dt);
+        }
+    }
+
+    fn draw(&mut self, canvas: &mut Canvas<Window>)
+    {
+        canvas.set_draw_color(Color::RGB(150, 150, 180));
+        canvas.clear();
+
+        self.camera.render(&self.env, canvas);
+
+        canvas.present();
+    }
+}
+
+pub fn main()
+{
+    let mut e = Engine::init(600, 480);
+    let g = &mut Game::init(600, 480);
+    e.run(g);
 }
