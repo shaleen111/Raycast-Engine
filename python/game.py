@@ -34,6 +34,8 @@ def main():
         dt = (current_frame - last_frame) / 1000
         last_frame = current_frame
 
+        print(1/dt)
+
         for x in range(width):
             camera_x = 2 * x / width - 1
             ray_dir = p.dir + camera_x * plane
