@@ -54,10 +54,8 @@ impl Runnable for Game
 {
     fn update(&mut self, state: &EngineState)
     {
-        println!("{:?}", 1.0 / state.dt);
         if state.key_held(Keycode::W)
         {
-            println!("W");
             let mut new_x = self.camera.pos.x + self.camera.projection_plane_orientation.x * self.camera_speed * state.dt;
             let mut new_y = self.camera.pos.y + self.camera.projection_plane_orientation.y * self.camera_speed * state.dt;
 
